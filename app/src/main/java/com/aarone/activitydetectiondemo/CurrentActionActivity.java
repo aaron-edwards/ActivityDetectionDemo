@@ -1,8 +1,13 @@
 package com.aarone.activitydetectiondemo;
 
+import android.Manifest;
 import android.content.Context;
+import android.content.pm.PackageManager;
 import android.content.res.Resources;
-import android.support.v7.app.AppCompatActivity;
+import android.location.Address;
+import android.support.v4.app.ActivityCompat;
+import android.support.v4.app.FragmentActivity;
+import android.support.v4.content.ContextCompat;
 import android.os.Bundle;
 import android.util.Log;
 import android.widget.TextView;
@@ -13,17 +18,28 @@ import com.google.android.gms.location.ActivityRecognitionResult;
 import com.google.android.gms.location.DetectedActivity;
 import com.google.android.gms.location.LocationRequest;
 
+import java.util.List;
+
 import butterknife.Bind;
 import butterknife.ButterKnife;
 import pl.charmas.android.reactivelocation.ReactiveLocationProvider;
 import rx.Subscription;
+import rx.schedulers.Schedulers;
 
-public class CurrentActionActivity extends AppCompatActivity {
+public class CurrentActionActivity extends FragmentActivity {
     private static final String TAG = CurrentActionActivity.class.getName();
+    private static final int PERMISSION_REQUEST_CODE = 1;
+
+    private ReactiveLocationProvider locationProvider;
+    private Subscription locationSubscription;
+    private Subscription geocodeSubscription;
     private Subscription detectActivitySubscription;
 
-    @Bind(R.id.textView)
-    TextView textView;
+    @Bind(R.id.textCurrentActivity)
+    TextView currentActivity;
+    @Bind(R.id.textLocation)
+    TextView location;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -35,15 +51,50 @@ public class CurrentActionActivity extends AppCompatActivity {
     @Override
     protected void onStart() {
         super.onStart();
-
-        ReactiveLocationProvider locationProvider = new ReactiveLocationProvider(this);
+        locationProvider = new ReactiveLocationProvider(this);
 
         detectActivitySubscription = locationProvider.getDetectedActivity(0)
-                .subscribe(result -> {
-                    Log.d(TAG, "Detected Activity: " + result);
-                    textView.setText(getDetectedActivityString(result));
+            .subscribe(result -> {
+                Log.d(TAG, "Detected Activity: " + result);
+                currentActivity.setText(getDetectedActivityString(result));
+            });
+
+        if(ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
+                != PackageManager.PERMISSION_GRANTED) {
+
+            ActivityCompat.requestPermissions(this,
+                    new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, PERMISSION_REQUEST_CODE);
+        } else {
+            pollLocation();
+        }
+
+    }
+
+    private void pollLocation() {
+        LocationRequest request = LocationRequest.create()
+                .setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY)
+                .setInterval(5000);
+
+        locationSubscription = locationProvider.getUpdatedLocation(request)
+                .subscribe(location -> {
+                    geocodeSubscription = locationProvider
+                            .getReverseGeocodeObservable(location.getLatitude(), location.getLongitude(), 1)
+                            .subscribe(addresses -> onAddressFound(addresses));
                 });
     }
+
+    private void onAddressFound(List<Address> addresses) {
+        if(! addresses.isEmpty()) {
+            Address address = addresses.get(0);
+            StringBuilder addressStringBuilder = new StringBuilder();
+            for(int i = 0; i < address.getMaxAddressLineIndex(); i++) {
+                addressStringBuilder.append(address.getAddressLine(i));
+                addressStringBuilder.append("\n");
+            }
+            location.setText(addressStringBuilder.toString());
+        }
+    }
+
 
     private String getDetectedActivityString(ActivityRecognitionResult result) {
         return Stream.of(result.getProbableActivities())
@@ -54,11 +105,30 @@ public class CurrentActionActivity extends AppCompatActivity {
 
     @Override
     protected void onStop() {
-        if( detectActivitySubscription != null && !detectActivitySubscription.isUnsubscribed()) {
-            detectActivitySubscription.unsubscribe();
-        }
+        unsubscribe(locationSubscription);
+        unsubscribe(detectActivitySubscription);
         super.onStop();
     }
+
+    private void unsubscribe(Subscription subscription) {
+        if( subscription != null && !subscription.isUnsubscribed()) {
+            subscription.unsubscribe();
+        }
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode,
+                                           String permissions[], int[] grantResults) {
+        switch (requestCode) {
+            case PERMISSION_REQUEST_CODE: {
+                // If request is cancelled, the result arrays are empty.
+                if (grantResults.length > 0
+                        && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    pollLocation();
+                }
+            }}
+    }
+
 
     public static String getActivityString(Context context, int detectedActivityType) {
         Resources resources = context.getResources();
