@@ -77,6 +77,7 @@ public class CurrentActionActivity extends FragmentActivity {
 
         locationSubscription = locationProvider.getUpdatedLocation(request)
                 .subscribe(location -> {
+
                     geocodeSubscription = locationProvider
                             .getReverseGeocodeObservable(location.getLatitude(), location.getLongitude(), 1)
                             .subscribe(addresses -> onAddressFound(addresses));
@@ -106,6 +107,7 @@ public class CurrentActionActivity extends FragmentActivity {
     @Override
     protected void onStop() {
         unsubscribe(locationSubscription);
+        unsubscribe(geocodeSubscription);
         unsubscribe(detectActivitySubscription);
         super.onStop();
     }
