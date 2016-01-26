@@ -76,15 +76,15 @@ public class CurrentActionActivity extends FragmentActivity {
                 .setInterval(5000);
 
         locationSubscription = locationProvider.getUpdatedLocation(request)
-                .subscribe(location -> {
-
-                    geocodeSubscription = locationProvider
-                            .getReverseGeocodeObservable(location.getLatitude(), location.getLongitude(), 1)
-                            .subscribe(addresses -> onAddressFound(addresses));
-                });
+                .flatMap(location -> {
+                    Log.d(TAG, "Location: " + location);
+                    return locationProvider.getReverseGeocodeObservable(location.getLatitude(), location.getLongitude(), 1);
+                })
+                .subscribe(addresses -> onAddressFound(addresses));
     }
 
     private void onAddressFound(List<Address> addresses) {
+        Log.d(TAG, "Addresses: " + addresses);
         if(! addresses.isEmpty()) {
             Address address = addresses.get(0);
             StringBuilder addressStringBuilder = new StringBuilder();
