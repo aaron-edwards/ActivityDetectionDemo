@@ -24,7 +24,6 @@ import butterknife.Bind;
 import butterknife.ButterKnife;
 import pl.charmas.android.reactivelocation.ReactiveLocationProvider;
 import rx.Subscription;
-import rx.schedulers.Schedulers;
 
 public class CurrentActionActivity extends FragmentActivity {
     private static final String TAG = CurrentActionActivity.class.getName();
@@ -32,13 +31,14 @@ public class CurrentActionActivity extends FragmentActivity {
 
     private ReactiveLocationProvider locationProvider;
     private Subscription locationSubscription;
-    private Subscription geocodeSubscription;
     private Subscription detectActivitySubscription;
 
     @Bind(R.id.textCurrentActivity)
-    TextView currentActivity;
+    TextView currentActivityText;
     @Bind(R.id.textLocation)
-    TextView location;
+    TextView locationText;
+    @Bind(R.id.textAddress)
+    TextView addressText;
 
 
     @Override
@@ -56,7 +56,7 @@ public class CurrentActionActivity extends FragmentActivity {
         detectActivitySubscription = locationProvider.getDetectedActivity(0)
             .subscribe(result -> {
                 Log.d(TAG, "Detected Activity: " + result);
-                currentActivity.setText(getDetectedActivityString(result));
+                currentActivityText.setText(getDetectedActivityString(result));
             });
 
         if(ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
@@ -78,6 +78,10 @@ public class CurrentActionActivity extends FragmentActivity {
         locationSubscription = locationProvider.getUpdatedLocation(request)
                 .flatMap(location -> {
                     Log.d(TAG, "Location: " + location);
+                    locationText.setText(
+                            "Latitude: " + location.getLatitude() + "\n" +
+                                    "Longitude: " + location.getLongitude() + "\n" +
+                                    "Altitude: " + location.getAltitude());
                     return locationProvider.getReverseGeocodeObservable(location.getLatitude(), location.getLongitude(), 1);
                 })
                 .subscribe(addresses -> onAddressFound(addresses));
@@ -92,7 +96,7 @@ public class CurrentActionActivity extends FragmentActivity {
                 addressStringBuilder.append(address.getAddressLine(i));
                 addressStringBuilder.append("\n");
             }
-            location.setText(addressStringBuilder.toString());
+            addressText.setText(addressStringBuilder.toString());
         }
     }
 
@@ -107,7 +111,6 @@ public class CurrentActionActivity extends FragmentActivity {
     @Override
     protected void onStop() {
         unsubscribe(locationSubscription);
-        unsubscribe(geocodeSubscription);
         unsubscribe(detectActivitySubscription);
         super.onStop();
     }

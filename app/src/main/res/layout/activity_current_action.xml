@@ -46,4 +46,24 @@
         android:layout_alignStart="@+id/textCurrentActivityLabel"
         android:layout_marginLeft="16dp" />
 
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textAppearance="?android:attr/textAppearanceLarge"
+        android:text="Address"
+        android:id="@+id/textAddressLabel"
+        android:layout_alignParentTop="true"
+        android:layout_centerHorizontal="true"
+        android:textColor="?attr/colorAccent"/>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textAppearance="?android:attr/textAppearanceLarge"
+        android:text="{{Address}}"
+        android:id="@+id/textAddress"
+        android:layout_below="@+id/textCurrentActivityLabel"
+        android:layout_alignStart="@+id/textCurrentActivityLabel"
+        android:layout_marginLeft="16dp" />
+
 </LinearLayout>
