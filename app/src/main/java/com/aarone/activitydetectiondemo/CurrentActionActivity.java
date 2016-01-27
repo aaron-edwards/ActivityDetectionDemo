@@ -84,20 +84,19 @@ public class CurrentActionActivity extends FragmentActivity {
                                     "Altitude: " + location.getAltitude());
                     return locationProvider.getReverseGeocodeObservable(location.getLatitude(), location.getLongitude(), 1);
                 })
-                .subscribe(addresses -> onAddressFound(addresses));
+                .filter(addresses -> ! addresses.isEmpty())
+                .map(addresses -> addresses.get(0))
+                .map(address -> constructAddressString(address))
+                .subscribe(address -> addressText.setText(address));
     }
 
-    private void onAddressFound(List<Address> addresses) {
-        Log.d(TAG, "Addresses: " + addresses);
-        if(! addresses.isEmpty()) {
-            Address address = addresses.get(0);
-            StringBuilder addressStringBuilder = new StringBuilder();
-            for(int i = 0; i < address.getMaxAddressLineIndex(); i++) {
-                addressStringBuilder.append(address.getAddressLine(i));
-                addressStringBuilder.append("\n");
-            }
-            addressText.setText(addressStringBuilder.toString());
+    private String constructAddressString(Address address) {
+        StringBuilder addressStringBuilder = new StringBuilder();
+        for(int i = 0; i < address.getMaxAddressLineIndex(); i++) {
+            addressStringBuilder.append(address.getAddressLine(i));
+            addressStringBuilder.append("\n");
         }
+        return addressStringBuilder.toString();
     }
 
 
